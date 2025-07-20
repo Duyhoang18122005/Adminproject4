@@ -19,6 +19,14 @@ const UserListPage = () => {
   const [selectedDetailUser, setSelectedDetailUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [notification, setNotification] = useState({ show: false, message: '', type: 'success' });
+
+  const showNotification = (message, type = 'success') => {
+    setNotification({ show: true, message, type });
+    setTimeout(() => {
+      setNotification({ show: false, message: '', type: 'success' });
+    }, 3000);
+  };
 
   // Available roles with descriptions
   const roleOptions = [
@@ -129,8 +137,8 @@ const UserListPage = () => {
   const handleOpenPermissionModal = async (userId) => {
     setSelectedUser(userId);
     setShowPermissionModal(true);
-    const user = users.find((u) => u.id === userId);
-    setSelectedRole(user?.role || "");
+      const user = users.find((u) => u.id === userId);
+      setSelectedRole(user?.role || "");
   };
 
   // Save role
@@ -149,12 +157,13 @@ const UserListPage = () => {
           : user
       ));
       
-      alert("Cập nhật vai trò thành công!");
+      showNotification("Cập nhật vai trò thành công!", "success");
       setShowPermissionModal(false);
       setSelectedUser(null);
       setSelectedRole("");
     } catch (err) {
-      alert("Có lỗi khi cập nhật vai trò!");
+      console.error('Error updating role:', err);
+      showNotification("Có lỗi khi cập nhật vai trò!", "error");
     }
   };
 
@@ -167,9 +176,10 @@ const UserListPage = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUsers(users.filter(user => user.id !== userId));
-      alert("Xóa người dùng thành công!");
+      showNotification("Xóa người dùng thành công!", "success");
     } catch (err) {
-      alert("Có lỗi khi xóa người dùng!");
+      console.error('Error deleting user:', err);
+      showNotification("Có lỗi khi xóa người dùng!", "error");
     }
   };
 
@@ -192,9 +202,10 @@ const UserListPage = () => {
           : u
       ));
       
-      alert(isBanned ? "Đã mở khóa người dùng!" : "Đã khóa người dùng!");
+      showNotification(isBanned ? "Đã mở khóa người dùng!" : "Đã khóa người dùng!", "success");
     } catch (err) {
-      alert("Có lỗi khi thay đổi trạng thái người dùng!");
+      console.error('Error toggling user ban status:', err);
+      showNotification("Có lỗi khi thay đổi trạng thái người dùng!", "error");
     }
   };
 
@@ -582,409 +593,207 @@ const UserListPage = () => {
             </div>
           )}
         </div>
-      </div>
-
-      {/* Detail Modal */}
-      {showDetailModal && selectedDetailUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            {/* Header */}
-            <div className="sticky top-0 bg-white rounded-t-2xl p-6 border-b border-gray-100 z-10">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
-                    <i className="fas fa-user text-white text-xl"></i>
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Chi tiết người dùng</h2>
-                    <p className="text-gray-600">Thông tin chi tiết và thống kê</p>
-                  </div>
-                </div>
+        
+        {/* Permission Modal */}
+        {showPermissionModal && selectedUser && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl p-6 shadow-xl w-full max-w-md">
+              <h3 className="text-xl font-bold mb-4">Phân quyền người dùng</h3>
+              <p className="text-gray-700 mb-4">
+                Bạn đang phân quyền cho người dùng có ID: {selectedUser}
+              </p>
+              <div className="flex flex-col gap-3">
+                {roleOptions.map((role) => (
+                  <button
+                    key={role.value}
+                    onClick={() => setSelectedRole(role.value)}
+                    className={`flex items-center justify-between px-4 py-2 rounded-xl text-left text-gray-800 hover:bg-gray-100 transition-colors ${
+                      selectedRole === role.value
+                        ? 'bg-indigo-100 font-medium'
+                        : 'bg-white'
+                    }`}
+                  >
+                    <div className="flex items-center">
+                      <i className={`${role.icon} mr-3 text-indigo-600 text-lg`}></i>
+                      <span>{role.label}</span>
+                    </div>
+                    <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${role.color} border`}>
+                      {role.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
                 <button
-                  onClick={() => setShowDetailModal(false)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-lg hover:bg-gray-100"
+                  onClick={() => setShowPermissionModal(false)}
+                  className="px-6 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
                 >
-                  <i className="fas fa-times text-xl"></i>
+                  Hủy
+                </button>
+                <button
+                  onClick={handleSaveRole}
+                  className="px-6 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 font-medium"
+                >
+                  Lưu phân quyền
                 </button>
               </div>
             </div>
-
-            {/* Content */}
-            <div className="p-6 pt-8">
-              <div className="space-y-8">
-                {/* User Profile Section */}
-                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-6 mt-4">
-                  <div className="flex items-start space-x-6">
-                    <div className="relative">
-                      <img
-                        className="w-24 h-24 rounded-2xl object-cover border-4 border-white shadow-lg"
-                        src={selectedDetailUser.avatar}
-                        alt={selectedDetailUser.name}
-                        onError={e => { 
-                          e.target.onerror = null; 
-                          e.target.src = '/images/avata1.jpg'; 
-                        }}
-                      />
-                      <div className={`absolute -bottom-2 -right-2 w-8 h-8 rounded-full border-4 border-white flex items-center justify-center ${
-                        selectedDetailUser.status === 'Hoạt động' ? 'bg-green-500' : 'bg-gray-400'
-                      }`}>
-                        <i className={`fas fa-circle text-xs ${selectedDetailUser.status === 'Hoạt động' ? 'text-green-500' : 'text-gray-400'}`}></i>
-                      </div>
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-4 mb-4">
-                        <h3 className="text-2xl font-bold text-gray-900">
-                          {selectedDetailUser.name}
-                        </h3>
-                        <span className={`px-3 py-1 text-sm font-semibold rounded-full ${getRoleBadge(selectedDetailUser.role).color}`}>
-                          {getRoleBadge(selectedDetailUser.role).text}
-                        </span>
-                        <span className={`px-3 py-1 text-sm font-semibold rounded-full ${getStatusBadge(selectedDetailUser.status).color}`}>
-                          {selectedDetailUser.status}
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="text-gray-600">Email:</span>
-                          <p className="font-medium text-gray-900 break-all">{selectedDetailUser.email}</p>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">Username:</span>
-                          <p className="font-medium text-gray-900">{selectedDetailUser.username || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">Ngày tham gia:</span>
-                          <p className="font-medium text-gray-900">{selectedDetailUser.createdAt}</p>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">ID:</span>
-                          <p className="font-medium text-gray-900">#{selectedDetailUser.id}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Stats Cards - Only show for Players/Gamers */}
-                {(selectedDetailUser.role && 
-                  (selectedDetailUser.role.toUpperCase().includes('ROLE_PLAYER') || 
-                   selectedDetailUser.role.toUpperCase().includes('GAMER') ||
-                   selectedDetailUser.role.toUpperCase().includes('PLAYER'))) && (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-gray-600 mb-1">Tổng đơn hàng</p>
-                          <p className="text-3xl font-bold text-gray-900">{selectedDetailUser.totalOrders || 0}</p>
-                        </div>
-                        <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                          <i className="fas fa-shopping-cart text-blue-600 text-xl"></i>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-gray-600 mb-1">Tổng đánh giá</p>
-                          <p className="text-3xl font-bold text-gray-900">{selectedDetailUser.totalReviews || 0}</p>
-                        </div>
-                        <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
-                          <i className="fas fa-star text-yellow-600 text-xl"></i>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-gray-600 mb-1">Đánh giá trung bình</p>
-                          <p className="text-3xl font-bold text-gray-900">
-                            {selectedDetailUser.averageRating ? selectedDetailUser.averageRating.toFixed(1) : '0.0'}
-                          </p>
-                        </div>
-                        <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                          <i className="fas fa-star-half-alt text-green-600 text-xl"></i>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Detailed Information */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {/* Personal Information */}
-                  <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                    <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                      <i className="fas fa-user-circle text-indigo-600 mr-2"></i>
-                      Thông tin cá nhân
-                    </h4>
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                        <span className="text-gray-600">Họ và tên:</span>
-                        <span className="font-medium text-gray-900">{selectedDetailUser.name || 'Chưa cập nhật'}</span>
-                      </div>
-                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                        <span className="text-gray-600">Username:</span>
-                        <span className="font-medium text-gray-900">{selectedDetailUser.username || 'Chưa cập nhật'}</span>
-                      </div>
-                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                        <span className="text-gray-600">Email:</span>
-                        <span className="font-medium text-gray-900 break-all">{selectedDetailUser.email}</span>
-                      </div>
-                      <div className="flex justify-between items-center py-2">
-                        <span className="text-gray-600">ID:</span>
-                        <span className="font-medium text-gray-900">#{selectedDetailUser.id}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Account Information */}
-                  <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                    <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                      <i className="fas fa-shield-alt text-purple-600 mr-2"></i>
-                      Thông tin tài khoản
-                    </h4>
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                        <span className="text-gray-600">Trạng thái:</span>
-                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadge(selectedDetailUser.status).color}`}>
-                          {selectedDetailUser.status}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                        <span className="text-gray-600">Vai trò:</span>
-                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getRoleBadge(selectedDetailUser.role).color}`}>
-                          {getRoleBadge(selectedDetailUser.role).text}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                        <span className="text-gray-600">Ngày tham gia:</span>
-                        <span className="font-medium text-gray-900">{selectedDetailUser.createdAt}</span>
-                      </div>
-                      <div className="flex justify-between items-center py-2">
-                        <span className="text-gray-600">Số dư:</span>
-                        <span className="font-medium text-gray-900">
-                          {selectedDetailUser.coin ? new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 0 }).format(selectedDetailUser.coin) + ' xu' : '0 xu'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex justify-end pt-6 border-t border-gray-100">
-                  <button
-                    onClick={() => setShowDetailModal(false)}
-                    className="px-6 py-3 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors font-medium"
-                  >
-                    Đóng
-                  </button>
-                </div>
-              </div>
-            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Create User Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative">
-            <button 
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-xl transition-colors" 
-              onClick={() => setShowCreateModal(false)}
-            >
-              <i className="fas fa-times"></i>
-            </button>
-            
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Thêm Người dùng</h2>
-            
-            <form onSubmit={(e) => { e.preventDefault(); handleCreateUser(); }} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Họ tên</label>
-                <input
-                  type="text"
-                  value={newUser.fullName}
-                  onChange={(e) => setNewUser({...newUser, fullName: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  required
-                />
+        {/* Create User Modal */}
+        {showCreateModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl p-6 shadow-xl w-full max-w-md">
+              <h3 className="text-xl font-bold mb-4">Tạo người dùng mới</h3>
+              <div className="flex flex-col gap-3">
+                <div>
+                  <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+                    Tên đăng nhập
+                  </label>
+                  <input
+                    type="text"
+                    id="username"
+                    value={newUser.username}
+                    onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="VD: john_doe"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    id="email"
+                    value={newUser.email}
+                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="VD: john.doe@example.com"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">
+                    Họ và tên
+                  </label>
+                  <input
+                    type="text"
+                    id="fullName"
+                    value={newUser.fullName}
+                    onChange={(e) => setNewUser({ ...newUser, fullName: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="VD: John Doe"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                    Mật khẩu
+                  </label>
+                  <input
+                    type="password"
+                    id="password"
+                    value={newUser.password}
+                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="Mật khẩu mặc định"
+                  />
+                </div>
               </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
-                <input
-                  type="text"
-                  value={newUser.username}
-                  onChange={(e) => setNewUser({...newUser, username: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                <input
-                  type="email"
-                  value={newUser.email}
-                  onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Mật khẩu</label>
-                <input
-                  type="password"
-                  value={newUser.password}
-                  onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  required
-                />
-              </div>
-              
-              <div className="flex justify-end space-x-3 pt-4">
+              <div className="flex justify-end gap-3 mt-6">
                 <button
-                  type="button"
                   onClick={() => setShowCreateModal(false)}
                   className="px-6 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
                 >
                   Hủy
                 </button>
                 <button
-                  type="submit"
+                  onClick={handleCreateUser}
                   className="px-6 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 font-medium"
                 >
-                  Thêm Người dùng
+                  Tạo người dùng
                 </button>
               </div>
-            </form>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Role Assignment Modal */}
-      {showPermissionModal && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
-          onClick={() => setShowPermissionModal(false)}
-        >
-          <div 
-            className="bg-white rounded-3xl shadow-2xl w-full max-w-lg relative overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-4 text-white">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
-                    <i className="fas fa-user-shield"></i>
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-bold">Phân quyền người dùng</h2>
-                    <p className="text-indigo-100 text-xs">Chọn vai trò phù hợp</p>
-                  </div>
+        {/* Detail Modal */}
+        {showDetailModal && selectedDetailUser && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl p-6 shadow-xl w-full max-w-md">
+              <h3 className="text-xl font-bold mb-4">Chi tiết người dùng</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Tên đăng nhập:</p>
+                  <p className="text-gray-900">{selectedDetailUser.username}</p>
                 </div>
-                <button 
-                  onClick={() => setShowPermissionModal(false)}
-                  className="text-white hover:text-indigo-100 transition-colors p-1 rounded-lg hover:bg-white hover:bg-opacity-20"
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Email:</p>
+                  <p className="text-gray-900">{selectedDetailUser.email}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Họ và tên:</p>
+                  <p className="text-gray-900">{selectedDetailUser.fullName}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Vai trò:</p>
+                  <p className="text-gray-900">{selectedDetailUser.role}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Trạng thái:</p>
+                  <p className="text-gray-900">{selectedDetailUser.status}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Ngày tham gia:</p>
+                  <p className="text-gray-900">{selectedDetailUser.createdAt}</p>
+                </div>
+              </div>
+              <div className="flex justify-end mt-6">
+                <button
+                  onClick={() => setShowDetailModal(false)}
+                  className="px-6 py-2 bg-gray-200 text-gray-800 rounded-xl hover:bg-gray-300 transition-colors"
                 >
-                  <i className="fas fa-times"></i>
+                  Đóng
                 </button>
               </div>
             </div>
-
-            {/* Content */}
-            <div className="p-4">
-              {/* User Info */}
-              {selectedUser && (
-                <div className="mb-4 p-3 bg-gray-50 rounded-xl">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
-                      <i className="fas fa-user text-white text-sm"></i>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 text-sm">
-                        {users.find(u => u.id === selectedUser)?.name || 'Người dùng'}
-                      </h3>
-                      <p className="text-xs text-gray-600">
-                        {users.find(u => u.id === selectedUser)?.email || ''}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+          </div>
+        )}
+      </div>
+      
+      {/* Notification Toast */}
+      {notification.show && (
+        <div className={`fixed top-4 right-4 z-50 p-4 rounded-xl shadow-lg border transition-all duration-300 ${
+          notification.type === 'success' 
+            ? 'bg-green-50 border-green-200 text-green-800' 
+            : 'bg-red-50 border-red-200 text-red-800'
+        }`}>
+          <div className="flex items-center space-x-3">
+            <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
+              notification.type === 'success' ? 'bg-green-100' : 'bg-red-100'
+            }`}>
+              {notification.type === 'success' ? (
+                <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               )}
-
-              {/* Role Selection */}
-              <div className="space-y-3">
-                <h3 className="text-base font-semibold text-gray-900 mb-3">Chọn vai trò</h3>
-                <div className="grid gap-3">
-                  {roleOptions.map((role) => (
-                    <div
-                      key={role.value}
-                      onClick={() => setSelectedRole(role.value)}
-                      className={`relative cursor-pointer rounded-xl p-3 border-2 transition-all duration-200 ${
-                        selectedRole === role.value
-                          ? `${role.borderColor} ${role.bgColor} shadow-md scale-102`
-                          : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-r ${role.color}`}>
-                          <i className={`${role.icon} text-white`}></i>
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900 text-sm">{role.label}</h4>
-                          <p className="text-xs text-gray-600">{role.description}</p>
-                        </div>
-                        {selectedRole === role.value && (
-                          <div className="w-5 h-5 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
-                            <i className="fas fa-check text-white text-xs"></i>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Warning */}
-              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
-                <div className="flex items-start space-x-2">
-                  <i className="fas fa-exclamation-triangle text-yellow-600 mt-0.5 text-sm"></i>
-                  <div>
-                    <h4 className="font-medium text-yellow-800 text-sm">Lưu ý</h4>
-                    <p className="text-xs text-yellow-700 mt-1">
-                      Việc thay đổi vai trò sẽ ảnh hưởng đến quyền truy cập của người dùng.
-                    </p>
-                  </div>
-                </div>
-              </div>
             </div>
-
-            {/* Footer */}
-            <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex justify-end space-x-2">
-              <button
-                onClick={() => setShowPermissionModal(false)}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors font-medium text-sm"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={handleSaveRole}
-                disabled={!selectedRole}
-                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 text-sm ${
-                  selectedRole
-                    ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 shadow-md hover:shadow-lg'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
-              >
-                <i className="fas fa-save mr-1"></i>
-                Lưu vai trò
-              </button>
+            <div className="flex-1">
+              <p className="text-sm font-medium">{notification.message}</p>
             </div>
+            <button
+              onClick={() => setNotification({ show: false, message: '', type: 'success' })}
+              className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
         </div>
       )}
@@ -992,4 +801,4 @@ const UserListPage = () => {
   );
 };
 
-export default UserListPage; 
+export default UserListPage;

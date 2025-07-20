@@ -5,7 +5,7 @@ import AvatarImage from '../components/AvatarImage';
 import { getCurrentUser } from '../api/userApi';
 
 const AdminLayout = ({ children, breadcrumb }) => {
-    const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -183,9 +183,9 @@ const AdminLayout = ({ children, breadcrumb }) => {
                     <AvatarImage
                       userId={currentUser?.id}
                       alt={currentUser?.fullName || currentUser?.username || 'Admin'}
-                      className="w-9 h-9 rounded-xl object-cover border-2 border-indigo-500/50"
+                    className="w-9 h-9 rounded-xl object-cover border-2 border-indigo-500/50"
                       size={36}
-                    />
+                  />
                   )}
                   <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
                 </div>
@@ -221,9 +221,9 @@ const AdminLayout = ({ children, breadcrumb }) => {
                         <AvatarImage
                           userId={currentUser?.id}
                           alt={currentUser?.fullName || currentUser?.username || 'Admin'}
-                          className="w-10 h-10 rounded-xl object-cover"
+                        className="w-10 h-10 rounded-xl object-cover"
                           size={40}
-                        />
+                      />
                       )}
                       <div>
                         <div className={`font-semibold ${

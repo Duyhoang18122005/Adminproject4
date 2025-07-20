@@ -1,4 +1,4 @@
-// The exported code uses Tailwind CSS. Install Tailwind CSS in your dev environment to ensure all styles work.
+
 
 import React, { useState, useEffect } from "react";
 import * as echarts from "echarts";
@@ -53,6 +53,14 @@ const GameListPage = () => {
   });
   const [isAdding, setIsAdding] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [notification, setNotification] = useState({ show: false, message: '', type: 'success' });
+
+  const showNotification = (message, type = 'success') => {
+    setNotification({ show: true, message, type });
+    setTimeout(() => {
+      setNotification({ show: false, message: '', type: 'success' });
+    }, 3000);
+  };
 
   const fetchGames = async () => {
     setIsLoading(true);
@@ -61,6 +69,10 @@ const GameListPage = () => {
       const res = await axiosInstance.get('/games', {
         headers: { Authorization: `Bearer ${token}` },
       });
+      console.log('Games API response:', res.data);
+      console.log('Sample game data:', res.data[0]);
+      
+      // API không có trường platform, để nguyên dữ liệu gốc
       setGames(res.data);
       const categories = Array.from(new Set(res.data.map(g => g.category).filter(Boolean)));
       setGameCategories(["Tất cả", ...categories]);
@@ -404,7 +416,7 @@ const GameListPage = () => {
 
   const filteredGames = games.filter(game => {
     const matchesSearch = game.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         game.description.toLowerCase().includes(searchQuery.toLowerCase());
+                         game.description?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedGameType === "Tất cả" || game.category === selectedGameType;
     const matchesPlatform = selectedPlatform === "Tất cả" || game.platform === selectedPlatform;
     const matchesStatus = selectedStatus === "Tất cả" || game.status === selectedStatus;
@@ -449,6 +461,27 @@ const GameListPage = () => {
         return 'bg-red-50 text-red-700 border-red-200';
       case 'Giải đố':
         return 'bg-purple-50 text-purple-700 border-purple-200';
+      default:
+        return 'bg-gray-50 text-gray-700 border-gray-200';
+    }
+  };
+
+  const getPlatformColor = (platform) => {
+    switch (platform?.toLowerCase()) {
+      case 'mobile':
+      case 'mobi':
+        return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'pc':
+      case 'desktop':
+        return 'bg-green-50 text-green-700 border-green-200';
+      case 'console':
+        return 'bg-purple-50 text-purple-700 border-purple-200';
+      case 'web':
+        return 'bg-orange-50 text-orange-700 border-orange-200';
+      case '':
+      case null:
+      case undefined:
+        return 'bg-gray-50 text-gray-700 border-gray-200';
       default:
         return 'bg-gray-50 text-gray-700 border-gray-200';
     }
@@ -578,8 +611,8 @@ const GameListPage = () => {
               className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
             >
               <option value="Tất cả">Tất cả</option>
-              {platforms.map(platform => (
-                <option key={platform.id} value={platform.name}>{platform.name}</option>
+              {Array.from(new Set(games.map(g => g.platform).filter(Boolean))).map(platform => (
+                <option key={platform} value={platform}>{platform}</option>
               ))}
             </select>
           </div>
@@ -647,7 +680,9 @@ const GameListPage = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{game.platform}</div>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getPlatformColor(game.platform)}`}>
+                      {game.platform || 'Chưa cập nhật'}
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(game.status)}`}>
@@ -730,8 +765,10 @@ const GameListPage = () => {
       });
       setShowEditModal(false);
       fetchGames();
+      showNotification('Cập nhật game thành công!', 'success');
     } catch (err) {
-      alert('Có lỗi khi cập nhật game!');
+      console.error('Error updating game:', err);
+      showNotification('Có lỗi khi cập nhật game!', 'error');
     } finally {
       setIsEditing(false);
     }
@@ -745,8 +782,10 @@ const GameListPage = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       fetchGames();
+      showNotification('Xóa game thành công!', 'success');
     } catch (err) {
-      alert('Có lỗi khi xóa game!');
+      console.error('Error deleting game:', err);
+      showNotification('Có lỗi khi xóa game!', 'error');
     }
   };
 
@@ -784,10 +823,11 @@ const GameListPage = () => {
         availableRanks: '',
       });
       fetchGames();
+      showNotification('Thêm game thành công!', 'success');
     } catch (err) {
       console.error('Error adding game:', err);
       console.error('Error response:', err.response?.data);
-      alert('Có lỗi khi thêm game!');
+      showNotification('Có lỗi khi thêm game!', 'error');
     } finally {
       setIsAdding(false);
     }
@@ -915,14 +955,14 @@ const GameListPage = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold mb-2 text-gray-700">Nền tảng</label>
+                    <label className="block text-sm font-semibold mb-2 text-gray-700">Nền tảng (tùy chọn)</label>
                     <select
                       name="platform"
                       value={editForm.platform}
                       onChange={handleEditInputChange}
                       className="w-full px-4 py-2 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition"
                     >
-                      <option value="">Chọn nền tảng</option>
+                      <option value="">Chọn nền tảng (không bắt buộc)</option>
                       {platforms.map((plat) => (
                         <option key={plat.id} value={plat.name}>{plat.name}</option>
                       ))}
@@ -957,36 +997,36 @@ const GameListPage = () => {
         {/* Add Modal */}
         {showAddModal && (
           <div 
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
             onClick={() => setShowAddModal(false)}
           >
             <div 
-              className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              className="bg-white rounded-3xl shadow-2xl border border-gray-100 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="p-6 border-b border-gray-100">
-                <h3 className="text-xl font-semibold text-gray-900">Thêm game mới</h3>
+              <div className="p-8 border-b border-gray-100">
+                <h3 className="text-2xl font-bold text-center text-gray-900">Thêm game mới</h3>
               </div>
-              <form onSubmit={handleAddGame} className="p-6 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <form onSubmit={handleAddGame} className="p-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Tên game *</label>
+                    <label className="block text-sm font-semibold mb-2 text-gray-700">Tên game *</label>
                     <input
                       type="text"
                       name="name"
                       value={addForm.name}
                       onChange={handleAddInputChange}
                       required
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                      className="w-full px-4 py-2 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Loại game</label>
+                    <label className="block text-sm font-semibold mb-2 text-gray-700">Loại game</label>
                     <select
                       name="category"
                       value={addForm.category}
                       onChange={handleAddInputChange}
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                      className="w-full px-4 py-2 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition"
                     >
                       <option value="">Chọn loại game</option>
                       {categories.map((category) => (
@@ -996,134 +1036,132 @@ const GameListPage = () => {
                       ))}
                     </select>
                   </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Mô tả</label>
-                  <textarea
-                    name="description"
-                    value={addForm.description}
-                    onChange={handleAddInputChange}
-                    rows={3}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Nền tảng</label>
-                                          <select
-                        name="platform"
-                        value={addForm.platform}
-                        onChange={handleAddInputChange}
-                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                      >
-                        <option value="">Chọn nền tảng</option>
-                        {platforms.map((platform) => (
-                          <option key={platform.id} value={platform.name}>
-                            {platform.name}
-                          </option>
-                        ))}
-                      </select>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-semibold mb-2 text-gray-700">Mô tả</label>
+                    <textarea
+                      name="description"
+                      value={addForm.description}
+                      onChange={handleAddInputChange}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition min-h-[100px]"
+                    />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Trạng thái</label>
-                                          <select
-                        name="status"
-                        value={addForm.status}
-                        onChange={handleAddInputChange}
-                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                      >
-                        <option value="">Chọn trạng thái</option>
-                        {statuses.map((status) => (
-                          <option key={status.id} value={status.name}>
-                            {status.name}
-                          </option>
-                        ))}
-                      </select>
+                    <label className="block text-sm font-semibold mb-2 text-gray-700">Nền tảng (tùy chọn)</label>
+                    <select
+                      name="platform"
+                      value={addForm.platform}
+                      onChange={handleAddInputChange}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition"
+                    >
+                      <option value="">Chọn nền tảng (không bắt buộc)</option>
+                      {platforms.map((platform) => (
+                        <option key={platform.id} value={platform.name}>
+                          {platform.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">URL hình ảnh (optional)</label>
+                    <label className="block text-sm font-semibold mb-2 text-gray-700">Trạng thái</label>
+                    <select
+                      name="status"
+                      value={addForm.status}
+                      onChange={handleAddInputChange}
+                      className="w-full px-4 py-2 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition"
+                    >
+                      <option value="">Chọn trạng thái</option>
+                      {statuses.map((status) => (
+                        <option key={status.id} value={status.name}>
+                          {status.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-2 text-gray-700">URL hình ảnh</label>
                     <input
                       type="url"
                       name="imageUrl"
                       value={addForm.imageUrl}
                       onChange={handleAddInputChange}
                       placeholder="https://example.com/image.jpg"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                      className="w-full px-4 py-2 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">URL website (optional)</label>
+                    <label className="block text-sm font-semibold mb-2 text-gray-700">URL website</label>
                     <input
                       type="url"
                       name="websiteUrl"
                       value={addForm.websiteUrl}
                       onChange={handleAddInputChange}
                       placeholder="https://example.com"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                      className="w-full px-4 py-2 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-semibold mb-2 text-gray-700">Yêu cầu hệ thống</label>
+                    <textarea
+                      name="requirements"
+                      value={addForm.requirements}
+                      onChange={handleAddInputChange}
+                      placeholder="Ví dụ: Windows 10, RAM 8GB, GPU GTX 1060..."
+                      className="w-full px-4 py-2 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition min-h-[80px]"
                     />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Yêu cầu hệ thống (optional)</label>
-                  <textarea
-                    name="requirements"
-                    value={addForm.requirements}
-                    onChange={handleAddInputChange}
-                    rows={2}
-                    placeholder="Ví dụ: Windows 10, RAM 8GB, GPU GTX 1060..."
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                  />
-                </div>
-                <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-xl">
-                  <input
-                    type="checkbox"
-                    name="hasRoles"
-                    checked={addForm.hasRoles}
-                    onChange={handleAddInputChange}
-                    className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                  />
-                  <label className="text-sm font-medium text-gray-700">Game có vai trò (roles)</label>
-                </div>
-                {addForm.hasRoles && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Vai Trò</label>
-                      <input
-                        type="text"
-                        name="availableRoles"
-                        value={addForm.availableRoles}
-                        onChange={handleAddInputChange}
-                        placeholder="Tank, Support, DPS, Healer"
-                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Rank</label>
-                      <input
-                        type="text"
-                        name="availableRanks"
-                        value={addForm.availableRanks}
-                        onChange={handleAddInputChange}
-                        placeholder="Bronze, Silver, Gold, Platinum"
-                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                      />
-                    </div>
+                
+                <div className="mt-6 p-4 bg-gray-50 rounded-xl">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <input
+                      type="checkbox"
+                      name="hasRoles"
+                      checked={addForm.hasRoles}
+                      onChange={handleAddInputChange}
+                      className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                    />
+                    <label className="text-sm font-semibold text-gray-700">Game có vai trò (roles)</label>
                   </div>
-                )}
-                <div className="flex justify-end space-x-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowAddModal(false)}
-                    className="px-6 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors"
+                  {addForm.hasRoles && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Vai Trò</label>
+                        <input
+                          type="text"
+                          name="availableRoles"
+                          value={addForm.availableRoles}
+                          onChange={handleAddInputChange}
+                          placeholder="Tank, Support, DPS, Healer"
+                          className="w-full px-4 py-2 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Rank</label>
+                        <input
+                          type="text"
+                          name="availableRanks"
+                          value={addForm.availableRanks}
+                          onChange={handleAddInputChange}
+                          placeholder="Bronze, Silver, Gold, Platinum"
+                          className="w-full px-4 py-2 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex justify-end gap-4 mt-8">
+                  <button 
+                    type="button" 
+                    onClick={() => setShowAddModal(false)} 
+                    className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-6 py-2 rounded-xl transition"
                   >
                     Hủy
                   </button>
-                  <button
-                    type="submit"
+                  <button 
+                    type="submit" 
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-2 rounded-xl shadow transition" 
                     disabled={isAdding}
-                    className="px-6 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50"
                   >
                     {isAdding ? 'Đang thêm...' : 'Thêm game'}
                   </button>
@@ -1133,6 +1171,42 @@ const GameListPage = () => {
           </div>
         )}
       </div>
+      
+      {/* Notification Toast */}
+      {notification.show && (
+        <div className={`fixed top-4 right-4 z-50 p-4 rounded-xl shadow-lg border transition-all duration-300 ${
+          notification.type === 'success' 
+            ? 'bg-green-50 border-green-200 text-green-800' 
+            : 'bg-red-50 border-red-200 text-red-800'
+        }`}>
+          <div className="flex items-center space-x-3">
+            <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
+              notification.type === 'success' ? 'bg-green-100' : 'bg-red-100'
+            }`}>
+              {notification.type === 'success' ? (
+                <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              )}
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium">{notification.message}</p>
+            </div>
+            <button
+              onClick={() => setNotification({ show: false, message: '', type: 'success' })}
+              className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 };
