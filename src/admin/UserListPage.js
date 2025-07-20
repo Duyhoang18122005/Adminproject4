@@ -74,12 +74,17 @@ const UserListPage = () => {
           id: user.id,
           name: user.fullName || user.username || "",
           email: user.email,
-          role: user.roles && user.roles.length > 0 ? user.roles[0] : "USER",
+          role: user.roles && user.roles.length > 0 ? user.roles[0] : "ROLE_USER",
           status: user.enabled && user.accountNonLocked ? "Hoạt động" : 
                   user.enabled && !user.accountNonLocked ? "Bị khóa" : "Không hoạt động",
           createdAt: user.createdAt ? new Date(user.createdAt).toLocaleDateString("vi-VN") : "",
           avatar: getAvatarUrl(user.avatarUrl, user.id),
         }));
+        
+        // Debug: Log unique roles to see what we're working with
+        const uniqueRoles = [...new Set(apiUsers.map(user => user.role))];
+        console.log('Available roles in data:', uniqueRoles);
+        
         setUsers(apiUsers);
       } catch (err) {
         console.error('Error fetching users:', err);
@@ -93,12 +98,17 @@ const UserListPage = () => {
 
   // Filter users
   const filteredUsers = users.filter((user) => {
-    return (
-      (user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      (roleFilter === "" || user.role === roleFilter) &&
-      (statusFilter === "" || user.status === statusFilter)
-    );
+    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRole = roleFilter === "" || user.role === roleFilter;
+    const matchesStatus = statusFilter === "" || user.status === statusFilter;
+    
+    // Debug: Log filtering details
+    if (roleFilter && !matchesRole) {
+      console.log(`User ${user.name} role "${user.role}" doesn't match filter "${roleFilter}"`);
+    }
+    
+    return matchesSearch && matchesRole && matchesStatus;
   });
 
   // Sort users
@@ -227,7 +237,7 @@ const UserListPage = () => {
         id: user.id,
         name: user.fullName || user.username || "",
         email: user.email,
-        role: user.roles && user.roles.length > 0 ? user.roles[0] : "USER",
+        role: user.roles && user.roles.length > 0 ? user.roles[0] : "ROLE_USER",
         status: user.enabled && user.accountNonLocked ? "Hoạt động" : 
                 user.enabled && !user.accountNonLocked ? "Bị khóa" : "Không hoạt động",
         createdAt: user.createdAt ? new Date(user.createdAt).toLocaleDateString("vi-VN") : "",
@@ -261,14 +271,14 @@ const UserListPage = () => {
   // Get role badge
   const getRoleBadge = (role) => {
     switch (role) {
-      case 'ADMIN':
+      case 'ROLE_ADMIN':
         return { color: 'bg-purple-100 text-purple-800 border-purple-200', text: 'Admin' };
-      case 'GAMER':
+      case 'ROLE_PLAYER':
         return { color: 'bg-blue-100 text-blue-800 border-blue-200', text: 'Game thủ' };
-      case 'USER':
+      case 'ROLE_USER':
         return { color: 'bg-gray-100 text-gray-800 border-gray-200', text: 'Người dùng' };
       default:
-        return { color: 'bg-gray-100 text-gray-800 border-gray-200', text: role };
+        return { color: 'bg-gray-100 text-gray-800 border-gray-200', text: 'Người dùng' };
     }
   };
 
@@ -392,9 +402,9 @@ const UserListPage = () => {
                 className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               >
                 <option value="">Tất cả vai trò</option>
-                <option value="ADMIN">Admin</option>
-                <option value="USER">Người dùng</option>
-                <option value="GAMER">Game thủ</option>
+                <option value="ROLE_ADMIN">Admin</option>
+                <option value="ROLE_USER">Người dùng</option>
+                <option value="ROLE_PLAYER">Game thủ</option>
               </select>
 
               {/* Status Filter */}
